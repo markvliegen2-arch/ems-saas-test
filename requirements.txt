@@ -1,6 +1,6 @@
-fastapi
-uvicorn
-httpx
-pydantic
-supabase
-stripe
+fastapi==0.110.0
+uvicorn==0.28.0
+httpx==0.27.0
+pydantic==2.6.4
+supabase==2.4.0
+stripe==9.0.0
