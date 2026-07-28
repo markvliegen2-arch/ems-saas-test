@@ -1,0 +1,80 @@
+blueprint:
+  name: "EMS SaaS Cloud Client [v4.0.0 - Plug & Play]"
+  description: "Volledig standalone EMS client. Selecteer uw sensoren en uw omvormer-merk."
+  domain: automation
+  input:
+    ems_api_key: { name: "EMS API Key", selector: { text: {} } }
+    ems_cloud_endpoint: { name: "Cloud URL Endpoint", description: "Bijvoorbeeld: https://onrender.com", selector: { text: {} } }
+    inverter_brand:
+      name: Merk van uw Omvormer
+      selector:
+        select:
+          options:
+            - "SolaX Power"
+            - "Victron Energy"
+            - "Huawei SUN2000"
+            - "GoodWe"
+    is_recovering_helper: { name: Input Boolean voor Noodlaad Geheugen, selector: { entity: { domain: input_boolean } } }
+    battery_soc_sensor: { name: Batterij SoC Sensor, selector: { entity: { domain: sensor, device_class: battery } } }
+    pv_power_sensor: { name: Actueel PV Vermogen (W), selector: { entity: { domain: sensor, device_class: power } } }
+    house_consumption_sensor: { name: Actueel Huisverbruik (W), selector: { entity: { domain: sensor, device_class: power } } }
+    current_ems_mode_sensor: { name: Sensor voor Huidige EMS Hoofdmodus, selector: { entity: { domain: sensor } } }
+    current_inverter_mode_sensor: { name: Sensor voor Huidige Inverter Submodus, selector: { entity: { domain: sensor } } }
+    current_export_limit_sensor: { name: Sensor voor Huidige Exportlimiet (Optioneel), default: "", selector: { entity: { domain: sensor, device_class: power } } }
+
+mode: queued
+max: 5
+
+trigger:
+  - trigger: time_pattern
+    minutes: "/1"
+  - trigger: state
+    entity_id: !input battery_soc_sensor
+
+action:
+  - variables:
+      api_key: !input ems_api_key
+      endpoint: !input ems_cloud_endpoint
+      soc_val: "{{ states(!input battery_soc_sensor) | float(0) }}"
+      pv_val: "{{ states(!input pv_power_sensor) | float(0) }}"
+      con_val: "{{ states(!input house_consumption_sensor) | float(0) }}"
+      ems_val: "{{ states(!input current_ems_mode_sensor) }}"
+      inv_val: "{{ states(!input current_inverter_mode_sensor) }}"
+      rec_val: "{{ is_state(!input is_recovering_helper, 'on') | lower }}"
+      cur_exp_lim_ent: !input current_export_limit_sensor
+      brand_val: !input inverter_brand
+
+  - action: http_request.send_local_request
+    data:
+      url: "{{ endpoint }}/v1/optimize"
+      method: POST
+      headers:
+        Authorization: "Bearer {{ api_key }}"
+        Content-Type: "application/json"
+      payload: >-
+        {
+          "soc": {{ soc_val }},
+          "pv_power": {{ pv_val }},
+          "consumption": {{ con_val }},
+          "current_ems": "{{ ems_val }}",
+          "current_inv": "{{ inv_val }}",
+          "is_recovering": {{ rec_val }}
+        }
+    response_variable: cloud_response
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ cloud_response is defined and cloud_response.status == 200 and cloud_response.data.license_active == true }}"
+        sequence:
+          - action: script.ems_saas_universal_actuator
+            data:
+              brand: "{{ brand_val }}"
+              change_ems_needed: "{{ cloud_response.data.change_ems_needed }}"
+              target_ems_mode: "{{ cloud_response.data.target_ems_mode }}"
+              change_inv_needed: "{{ cloud_response.data.change_inv_needed }}"
+              target_inverter_mode: "{{ cloud_response.data.target_inverter_mode }}"
+              target_export_limit: "{{ cloud_response.data.target_export_limit | int }}"
+              current_export_limit_entity: "{{ cur_exp_lim_ent }}"
+              is_recovering_state: "{{ cloud_response.data.is_recovering }}"
+              is_recovering_helper_entity: !input is_recovering_helper
