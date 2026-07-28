@@ -49,9 +49,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def poll_cloud(now=None):
         try:
-            soc = hass.states.get(SOC_ENTITY)
-            pv = hass.states.get(PV_ENTITY)
-            con = hass.states.get(CONSUMPTION_ENTITY)
+                SOC_ENTITY = "sensor.goodwe_battery_state_of_charge"
+                PV_ENTITY = "sensor.goodwe_pv_power"
+                CONSUMPTION_ENTITY = "sensor.goodwe_house_consumption"
 
             if not soc or not pv:
                 return
