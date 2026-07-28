@@ -1,6 +1,2 @@
 fastapi
 uvicorn
-httpx
-pydantic
-supabase
-stripe
