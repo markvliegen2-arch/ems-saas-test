@@ -1,0 +1,11 @@
+{
+  "name": "EMS SaaS Universele Client",
+  "type": "integration",
+  "render_readme": true,
+  "blueprints": [
+    {
+      "name": "EMS SaaS Cloud Client",
+      "path": "blueprints/automation/ems_client.yaml"
+    }
+  ]
+}
