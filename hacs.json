@@ -1,11 +1,7 @@
 {
   "name": "EMS SaaS Universele Client",
-  "type": "integration",
+  "content_in_root": false,
+  "homeassistant": "2024.1.0",
   "render_readme": true,
-  "blueprints": [
-    {
-      "name": "EMS SaaS Cloud Client",
-      "path": "blueprints/automation/ems_client.yaml"
-    }
-  ]
+  "hacs": "1.6.0"
 }
